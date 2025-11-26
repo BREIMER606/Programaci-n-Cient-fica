@@ -1,42 +1,75 @@
+import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import ConfusionMatrixDisplay
+import pandas as pd
 
 
-# ===========================
-#       BASIC PLOTS
-# ===========================
+# =====================================================
+# RUTAS
+# =====================================================
+def get_root():
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+def load_processed(filename):
+    root = get_root()
+    path = os.path.join(root, "Data", "processed", filename)
+    print(f"📥 Cargando: {path}")
+    return pd.read_csv(path)
+
+
+def get_fig_path():
+    root = get_root()
+    figp = os.path.join(root, "Results", "figures")
+    os.makedirs(figp, exist_ok=True)
+    return figp
+
+
+# =====================================================
+# FIGURAS
+# =====================================================
 def plot_heatmap(df):
-    """Correlation heatmap."""
-    plt.figure(figsize=(8,6))
-    sns.heatmap(df.corr(), annot=True, cmap="coolwarm")
-    plt.title("Correlation Heatmap")
-    plt.show()
-
-def plot_box(df, cols):
-    """Boxplot of selected columns."""
-    df[cols].boxplot(figsize=(10,6))
-    plt.title("Boxplot Distribution")
-    plt.show()
+    figp = get_fig_path()
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(df.corr(numeric_only=True), cmap="coolwarm")
+    file = os.path.join(figp, "heatmap.png")
+    plt.savefig(file, dpi=300)
+    plt.close()
+    print(f"🖼 Heatmap guardado en:\n   {file}")
 
 
-# ===========================
-#     ADVANCED PLOTS
-# ===========================
+def plot_box(df):
+    figp = get_fig_path()
+    plt.figure(figsize=(12, 6))
+    sns.boxplot(data=df)
+    file = os.path.join(figp, "boxplot.png")
+    plt.savefig(file, dpi=300)
+    plt.close()
+    print(f"🖼 Boxplot guardado en:\n   {file}")
+
 
 def plot_pairplot(df):
-    """Seaborn pairplot (uses 500 random samples)."""
-    sns.pairplot(df.sample(500))
-    plt.show()
+    figp = get_fig_path()
+    g = sns.pairplot(df)
+    file = os.path.join(figp, "pairplot.png")
+    g.savefig(file)
+    plt.close()
+    print(f"🖼 Pairplot guardado en:\n   {file}")
 
 
-# ===========================
-#      CONFUSION MATRIX
-# ===========================
+def plot_confusion(cm):
+    figp = get_fig_path()
+    plt.figure(figsize=(6, 5))
+    sns.heatmap(cm, annot=True, cmap="magma", fmt="d")
+    file = os.path.join(figp, "confusion_matrix.png")
+    plt.savefig(file, dpi=300)
+    plt.close()
+    print(f"🖼 Matriz de confusión guardada en:\n   {file}")
 
-def plot_confusion(cm, model_name="Model"):
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-    disp.plot()
-    plt.title(f"Confusion Matrix - {model_name}")
-    plt.show()
+
+# ●●● EJECUCIÓN DIRECTA ●●●
+if __name__ == "__main__":
+    df = load_processed("trial2_clean.csv")
+    plot_heatmap(df)
+    plot_box(df)
+    plot_pairplot(df)
