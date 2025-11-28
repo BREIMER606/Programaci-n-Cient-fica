@@ -1,12 +1,12 @@
 # LABORATORIO_3 – Project Documentation
 
-This document summarizes the main steps of the analysis and the most relevant results produced by the pipeline.
+This document summarizes the main steps of the analysis and the most relevant results produced by the pipeline, and points to additional material where the algorithmic complexity and workflow are discussed in more detail.
 
 ---
 
 ## 1. Objective
 
-The goal of this lab is to design a reusable Python pipeline to process multisensor data (UWB, IMU, pose, barometer) and classify each time sample into three motion states based only on accelerometer measurements: **repose**, **transition**, and **motion**. The code is organized following common recommendations for scientific Python projects, with separate modules for preprocessing, visualization, and analysis.[web:547]
+The goal of this lab is to design a reusable Python pipeline to process multisensor data (UWB, IMU, pose, barometer) and classify each time sample into three motion states based only on accelerometer measurements: **repose**, **transition**, and **motion**. The code is organized following common recommendations for scientific Python projects, with separate modules for preprocessing, visualization, and analysis.
 
 ---
 
@@ -58,12 +58,23 @@ The goal of this lab is to design a reusable Python pipeline to process multisen
 
 ---
 
-## 4. How to reproduce these results
+## 4. Workflow and Big‑O analysis (notebooks)
+
+In addition to this document, the folder `notebooks/reporting/` contains `reporting.ipynb`, a reporting-style notebook that **does not re‑execute the full pipeline** but reconstructs the workflow step by step. The notebook mirrors the structure of the code (preprocessing → visualization → analysis), embeds the final figures and tables, and explains how each function is used inside the project.
+
+Within the same notebook, each core algorithm is annotated with its **Big‑O time complexity**: loading, cleaning and filtering operations scale linearly with the number of samples \(O(N)\); correlation and integration remain efficient for the dataset size; feature extraction is dominated by FFT computations \(O(N \log N)\); and the Random Forest training behaves approximately as \(O(T \cdot N \log N)\), with \(T\) the number of trees. These results show that the current implementation scales well for the dataset used in this lab and that the main computational cost is concentrated in the spectral features and the classifier, which is acceptable for offline analysis and guides future extensions to larger datasets.
+
+---
+
+## 5. How to reproduce these results
+
+This repository is designed to run inside a dedicated Anaconda virtual environment defined in `environment.yml`. It is strongly recommended to create and activate this environment before executing any script or notebook to ensure that all dependencies and versions match the ones used to generate the results.
 
 From the project root:
 
+conda env create -f environment.yml
 conda activate LABORATORIO_3
 python Main.py
 
 
-This command regenerates all processed data, tables, and figures under `results/`. The notebooks in `notebooks/` can be used to reproduce the same steps interactively and to discuss algorithmic complexity in more detail.
+This command regenerates all processed data, tables, and figures under `results/`. The notebooks in `notebooks/`, and in particular `notebooks/reporting/reporting.ipynb`, can then be used to inspect the workflow, review the Big‑O analysis, and relate each step of the pipeline to the corresponding visual and tabular outputs.

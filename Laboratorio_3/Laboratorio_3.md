@@ -115,14 +115,37 @@ This command:
 3. Generates heatmap, boxplot and violin plots under `results/figures/`.
 4. Produces integration figures, segment summary tables, motion‑class labels, feature table, Random Forest classification report and confusion matrix under `results/`.
 
-### 3.3 Tests and notebooks
+# Tests
 
-- Unit/integration tests under `Test/` or `tests/` (e.g., `tests/test_analysis.py`) can be run with:
+This folder contains small unit and integration tests that validate the behavior of the code under `Src/`. The tests run a focused subset of what `Main.py` executes end‑to‑end, so they are faster and help catch regressions without rebuilding the whole pipeline.[web:633]
 
-python -m unittest tests/test_analysis.py
+The main file is:
 
+- `test_analysis.py`: imports functions from `Src/analysis/analysis.py`, builds a small synthetic accelerometer dataset and runs class definition, feature extraction and Random Forest training. It checks that the expected columns are created, that numeric outputs are valid and that a classification report and confusion‑matrix PNG are generated under `results/`. This satisfies one of the requirements in the lab guide, which asks for an explicit code example illustrating the general behavior of the implemented algorithms and providing a way to test the overall repository implementation.
 
-- Notebooks in `notebooks/exploration/` and `notebooks/reporting/` analyze algorithmic complexity and document the behaviour of the main functions; they import the same modules from `Src/` and should be run using the `LABORATORIO_3` environment.[2]
+## How to run
+
+From the project root:
+
+conda activate LABORATORIO_3
+python -m unittest Test.test_analysis
+
+undefined
+
+### Notebooks
+
+This folder contains documentation-oriented notebooks for the project. The end‑to‑end pipeline is executed via `Main.py`; notebooks serve for explanation and reporting.
+
+## Structure
+- reporting/
+  - reporting.ipynb — Non-executable end-to-end; it presents the pipeline, annotates each core function with its Big‑O complexity, and embeds the figures/tables previously produced by the pipeline for an organized, readable report 
+
+- assignments/
+  - Lab1_Pct.ipynb, Lab2_Pct.ipynb — Earlier course work that informed this repository. They are kept as reference material and as an alternative exploratory path.
+
+## Notes
+- Use `Main.py` at the project root to regenerate data, figures, and tables; the reporting notebook is intended for inspection only, not for rerunning the analysis 
+
 
 ---
 
