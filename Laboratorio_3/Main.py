@@ -1,6 +1,6 @@
 """
 Main.py — Pipeline completo:
-Preprocessing → Visualization → Analysis (solo ACC)
+Preprocessing → Visualization → Analysis 
 
 FIGURAS  → results/figures
 TABLAS   → results/tables
