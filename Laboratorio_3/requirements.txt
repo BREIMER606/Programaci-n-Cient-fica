@@ -1,9 +1,8 @@
 numpy
-matplotlib
 pandas
 scipy
+matplotlib
 seaborn
-jupyter
 scikit-learn
-pathlib
-#sys
+jupyterlab
+ipykernel
