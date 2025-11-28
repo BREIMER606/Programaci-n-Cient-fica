@@ -1,75 +1,87 @@
+"""
+visualization.py
+----------------
+Módulo reutilizable para generación de visualizaciones estándar:
+
+- Mapa de calor de correlación
+- Boxplot de múltiples variables
+- Violinplot de múltiples variables
+
+Todas las funciones:
+    - Reciben un DataFrame y lista de columnas
+    - No contienen rutas absolutas ni prints
+    - Guardan la figura en la ruta indicada por parámetro
+
+Requiere seaborn y matplotlib.
+"""
+
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pandas as pd
 
 
 # =====================================================
-# RUTAS
+# 1. MAPA DE CALOR
 # =====================================================
-def get_root():
-    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+def generar_mapa_calor(df, columnas, ruta_figura):
+    """Genera y guarda un mapa de calor de correlación.
 
-def load_processed(filename):
-    root = get_root()
-    path = os.path.join(root, "Data", "processed", filename)
-    print(f"📥 Cargando: {path}")
-    return pd.read_csv(path)
+    Args:
+        df (DataFrame): Datos limpios.
+        columnas (list): Lista de columnas numéricas.
+        ruta_figura (str): Ruta donde se guardará la imagen .png
+    """
+    corr = df[columnas].corr()
 
-
-def get_fig_path():
-    root = get_root()
-    figp = os.path.join(root, "Results", "figures")
-    os.makedirs(figp, exist_ok=True)
-    return figp
-
-
-# =====================================================
-# FIGURAS
-# =====================================================
-def plot_heatmap(df):
-    figp = get_fig_path()
     plt.figure(figsize=(10, 8))
-    sns.heatmap(df.corr(numeric_only=True), cmap="coolwarm")
-    file = os.path.join(figp, "heatmap.png")
-    plt.savefig(file, dpi=300)
+    sns.heatmap(corr, annot=True, cmap="coolwarm")
+    plt.title("Heatmap - Correlación entre variables")
+
+    os.makedirs(os.path.dirname(ruta_figura), exist_ok=True)
+    plt.savefig(ruta_figura, dpi=300)
     plt.close()
-    print(f"🖼 Heatmap guardado en:\n   {file}")
 
 
-def plot_box(df):
-    figp = get_fig_path()
-    plt.figure(figsize=(12, 6))
-    sns.boxplot(data=df)
-    file = os.path.join(figp, "boxplot.png")
-    plt.savefig(file, dpi=300)
+# =====================================================
+# 2. BOXPLOT
+# =====================================================
+
+def generar_boxplot(df, columnas, ruta_figura):
+    """Genera y guarda un boxplot para múltiples columnas.
+
+    Args:
+        df (DataFrame): Datos limpios.
+        columnas (list): Variables a visualizar.
+        ruta_figura (str): Ruta donde guardar la figura.
+    """
+    plt.figure(figsize=(12, 8))
+    df[columnas].boxplot()
+    plt.xticks(rotation=90)
+    plt.title("Distribución y outliers de variables físicas")
+
+    os.makedirs(os.path.dirname(ruta_figura), exist_ok=True)
+    plt.savefig(ruta_figura, dpi=300)
     plt.close()
-    print(f"🖼 Boxplot guardado en:\n   {file}")
 
 
-def plot_pairplot(df):
-    figp = get_fig_path()
-    g = sns.pairplot(df)
-    file = os.path.join(figp, "pairplot.png")
-    g.savefig(file)
+# =====================================================
+# 3. VIOLINPLOT
+# =====================================================
+
+def generar_violinplot(df, columnas, ruta_figura):
+    """Genera y guarda un violinplot para múltiples variables.
+
+    Args:
+        df (DataFrame): Datos limpios.
+        columnas (list): Variables numéricas.
+        ruta_figura (str): Ruta donde guardar la figura.
+    """
+    plt.figure(figsize=(12, 8))
+    sns.violinplot(data=df[columnas], inner="quartile")
+    plt.xticks(rotation=90)
+    plt.title("Distribución (Violinplot) de variables físicas")
+
+    os.makedirs(os.path.dirname(ruta_figura), exist_ok=True)
+    plt.savefig(ruta_figura, dpi=300)
     plt.close()
-    print(f"🖼 Pairplot guardado en:\n   {file}")
-
-
-def plot_confusion(cm):
-    figp = get_fig_path()
-    plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, cmap="magma", fmt="d")
-    file = os.path.join(figp, "confusion_matrix.png")
-    plt.savefig(file, dpi=300)
-    plt.close()
-    print(f"🖼 Matriz de confusión guardada en:\n   {file}")
-
-
-# ●●● EJECUCIÓN DIRECTA ●●●
-if __name__ == "__main__":
-    df = load_processed("trial2_clean.csv")
-    plot_heatmap(df)
-    plot_box(df)
-    plot_pairplot(df)
