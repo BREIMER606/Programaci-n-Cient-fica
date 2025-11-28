@@ -1,18 +1,19 @@
 """
-analysis.py
+analysis:
 
-Módulo reutilizable para análisis del Laboratorio 3:
+Analysis module for Laboratory 3.
 
-- integración acc → vel
-- tablas de número de datos por segmento (PNG)
-- definición de clases por percentiles (PNG)
-- extracción de características ACC (PNG)
-- Random Forest (ACC) -> reporte PNG + matriz de confusión PNG
+This module contains reusable functions for:
+- Acceleration integration (acc → vel)
+- Segment statistics (saved as PNG table)
+- Class definition using acceleration magnitude percentiles (PNG table)
+- Accelerometer feature extraction (PNG table)
+- Random Forest classification using only accelerometer features (PNG table + PNG figure)
 
-IMPORTANTE:
-- Las TABLAS .png se guardan SIEMPRE en results/tables (ruta dada como parámetro).
-- Las FIGURAS se guardan en results/figures (ruta dada como parámetro).
-- Sin prints ni rutas absolutas.
+IMPORTANT:
+- All TABLES must be saved inside results/tables (path provided by main).
+- All FIGURES must be saved inside results/figures.
+- No print statements and no absolute paths.
 """
 
 import os
@@ -24,22 +25,25 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 
-# ============================================================
-#  UTILIDAD: Guardar DataFrame como PNG (TABLA)
-# ============================================================
-def df_to_png(df: pd.DataFrame, ruta_png: str, title: str = None, fontsize: int = 10):
-    """
-    Guarda un DataFrame como tabla PNG usando matplotlib.
 
-    TABLAS siempre deben guardarse en results/tables (ruta pasada desde main).
+# ============================================================
+#   UTILITY: Save DataFrame as PNG TABLE
+# ============================================================
+def df_to_png(df: pd.DataFrame, png_path: str, title: str = None, fontsize: int = 10):
+    """
+    Save a DataFrame as a PNG table using matplotlib.
 
     Args:
-        df: DataFrame.
-        ruta_png: ruta completa del .png (incluye directorio).
-        title: título opcional.
-        fontsize: tamaño de fuente.
+        df (pd.DataFrame): DataFrame to render as a table.
+        png_path (str): Output file path where the PNG will be saved.
+        title (str, optional): Optional title displayed above the table.
+        fontsize (int): Font size used within the table cells.
+
+    Notes:
+        - The directory for png_path is created automatically if it does not exist.
+        - No value is returned; the image file is saved directly.
     """
-    os.makedirs(os.path.dirname(ruta_png), exist_ok=True)
+    os.makedirs(os.path.dirname(png_path), exist_ok=True)
 
     rows, cols = df.shape
     height = max(1.5, 0.3 * rows + 1.5)
@@ -62,21 +66,47 @@ def df_to_png(df: pd.DataFrame, ruta_png: str, title: str = None, fontsize: int 
     table.set_fontsize(fontsize)
     table.scale(1, 1.2)
 
-    plt.savefig(ruta_png, dpi=300, bbox_inches="tight")
+    plt.savefig(png_path, dpi=300, bbox_inches="tight")
     plt.close()
 
+
 # ============================================================
-# 1) INTEGRACIÓN ACC → VEL (FIGURA)
+#   1) INTEGRATION acc → vel (FIGURE)
 # ============================================================
 class IntegratedSignal:
-    """Integración trapezoidal para señal (acc → vel)."""
+    """
+    Class for numerical integration of an acceleration signal using
+    the trapezoidal rule to approximate velocity.
+
+    Attributes:
+        time (np.ndarray): Time vector.
+        values (np.ndarray): Acceleration samples.
+        name (str): Optional name for the signal.
+    """
 
     def __init__(self, time: np.ndarray, values: np.ndarray, name: str = ""):
+        """
+        Initialize the IntegratedSignal object.
+
+        Args:
+            time (np.ndarray): Time stamps for the samples.
+            values (np.ndarray): Acceleration values.
+            name (str): Optional signal name.
+        """
         self.time = np.asarray(time)
         self.values = np.asarray(values)
         self.name = name
 
     def evaluate(self):
+        """
+        Compute integrated velocity using trapezoidal integration.
+
+        Returns:
+            tuple: (t, a, v)
+                t (np.ndarray): Clean time vector.
+                a (np.ndarray): Clean acceleration vector.
+                v (np.ndarray): Integrated velocity vector.
+        """
         mask = np.isfinite(self.time) & np.isfinite(self.values)
         t = self.time[mask]
         a = self.values[mask]
@@ -88,109 +118,146 @@ class IntegratedSignal:
         return t, a, v
 
 
-def generar_figura_integracion(df: pd.DataFrame,
-                               columna_tiempo: str,
-                               columnas_acc: list,
-                               max_muestras: int,
-                               ruta_figura: str):
+def generate_integration_figure(df: pd.DataFrame,
+                                time_column: str,
+                                acc_columns: list,
+                                max_samples: int,
+                                figure_path: str):
     """
-    Genera figura de integración (ACC vs VEL).
+    Generate and save a figure with acceleration and integrated velocity
+    for each supplied accelerometer axis.
 
-    Esta es una FIGURA → se guarda en results/figures (ruta pasada desde main).
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        time_column (str): Column name of the time vector.
+        acc_columns (list): List of acceleration columns to integrate.
+        max_samples (int): Maximum number of samples to plot.
+        figure_path (str): Output path of the saved figure.
+
+    Notes:
+        - This function saves a FIGURE (not a table) to results/figures.
     """
-    os.makedirs(os.path.dirname(ruta_figura), exist_ok=True)
+    os.makedirs(os.path.dirname(figure_path), exist_ok=True)
 
-    cols_ok = [c for c in columnas_acc if c in df.columns]
-    if len(cols_ok) == 0:
+    valid_cols = [c for c in acc_columns if c in df.columns]
+    if len(valid_cols) == 0:
         return
 
-    n = len(cols_ok)
+    n = len(valid_cols)
     fig, axes = plt.subplots(n, 1, figsize=(12, 3.5 * n), sharex=True)
     if n == 1:
         axes = [axes]
 
-    time = df[columna_tiempo].values
+    time = df[time_column].values
 
-    for i, col in enumerate(cols_ok):
+    for i, col in enumerate(valid_cols):
         acc = df[col].values
-        integ = IntegratedSignal(time, acc, col)
-        t, a, v = integ.evaluate()
+        integrated = IntegratedSignal(time, acc, col)
+        t, a, v = integrated.evaluate()
 
-        limit = min(len(t), max_muestras)
+        limit = min(len(t), max_samples)
+
         axes[i].plot(t[:limit], a[:limit], label=f"{col} (acc)", alpha=0.6)
         axes[i].plot(t[:limit], v[:limit], label=f"{col} (vel)", linewidth=2)
         axes[i].set_ylabel(col)
         axes[i].legend()
         axes[i].grid()
 
-    axes[-1].set_xlabel(columna_tiempo)
+    axes[-1].set_xlabel(time_column)
     plt.suptitle("Integration: Acceleration → Velocity", fontsize=14)
     plt.tight_layout()
-    plt.savefig(ruta_figura, dpi=300, bbox_inches="tight")
+    plt.savefig(figure_path, dpi=300, bbox_inches="tight")
     plt.close()
 
-# ============================================================
-# 2) TABLAS DE SEGMENTOS (TABLA PNG)
-# ============================================================
-def resumen_por_segmentos(df: pd.DataFrame, segmentos: dict) -> pd.DataFrame:
-    rows = []
-    for name, cols in segmentos.items():
-        cols_exist = [c for c in cols if c in df.columns]
 
-        if len(cols_exist) == 0:
+# ============================================================
+#   2) SEGMENT TABLES (TABLE PNG)
+# ============================================================
+def segment_summary(df: pd.DataFrame, segments: dict) -> pd.DataFrame:
+    """
+    Compute summary statistics for sensor data segments.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        segments (dict): Dictionary where each key is a segment name
+                         and each value is a list of columns.
+
+    Returns:
+        pd.DataFrame: A table with columns:
+            - Segment
+            - Total
+            - Missing
+            - %Missing
+    """
+    rows = []
+    for name, cols in segments.items():
+        valid_cols = [c for c in cols if c in df.columns]
+
+        if len(valid_cols) == 0:
             rows.append([name, 0, 0, np.nan])
             continue
 
-        total = int(np.prod(df[cols_exist].shape))
-        missing = int(df[cols_exist].isnull().sum().sum())
+        total = int(np.prod(df[valid_cols].shape))
+        missing = int(df[valid_cols].isnull().sum().sum())
         pct = missing / total * 100 if total > 0 else np.nan
 
         rows.append([name, total, missing, round(pct, 2)])
 
-    return pd.DataFrame(rows, columns=["Segmento", "Total", "Missing", "%Missing"])
+    return pd.DataFrame(rows, columns=["Segment", "Total", "Missing", "%Missing"])
 
 
-def guardar_resumen_segmentos_png(df: pd.DataFrame, segmentos: dict, ruta_png_tabla: str):
-    resumen = resumen_por_segmentos(df, segmentos)
-    df_to_png(resumen, ruta_png_tabla, title="Resumen por segmentos")
+def save_segment_summary_png(df: pd.DataFrame, segments: dict, png_path: str):
+    """
+    Save the segment summary table as a PNG.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+        segments (dict): Dictionary of segment → column list.
+        png_path (str): Output PNG path.
+    """
+    summary = segment_summary(df, segments)
+    df_to_png(summary, png_path, title="Segment Summary")
+
 
 # ============================================================
-# 3) DEFINICIÓN DE CLASES (TABLA PNG) — VERSIÓN EQUILIBRADA
+#   3) CLASS DEFINITION (TABLE PNG)
 # ============================================================
-def definir_clases_globales(df: pd.DataFrame,
-                            imu_cols_acc: list,
-                            p_low: float = 0.33,
-                            p_high: float = 0.66):
+def define_global_classes(df: pd.DataFrame,
+                          acc_columns: list,
+                          p_low: float = 0.33,
+                          p_high: float = 0.66):
     """
-    Define la columna 'final_global_mobile_state' usando el
-    módulo de la aceleración y percentiles globales.
+    Define a global motion state label ('repose', 'transition', 'motion')
+    based on acceleration magnitude percentiles.
 
-    - acc_mod baja  -> 'repose'
-    - acc_mod media -> 'transition'
-    - acc_mod alta  -> 'motion'
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        acc_columns (list): Columns used to compute acceleration magnitude.
+        p_low (float): Lower percentile threshold.
+        p_high (float): Upper percentile threshold.
 
-    p_low y p_high controlan el balance (~1/3 por clase por defecto).
+    Returns:
+        pd.DataFrame: Modified DataFrame containing:
+            - acc_magnitude
+            - final_global_mobile_state
     """
+    df_out = df.copy()
+    cols = [c for c in acc_columns if c in df_out.columns]
 
-    df_mod = df.copy()
-
-    # Asegurar que las columnas existen
-    cols = [c for c in imu_cols_acc if c in df_mod.columns]
     if len(cols) == 0:
-        df_mod["final_global_mobile_state"] = np.nan
-        return df_mod
+        df_out["final_global_mobile_state"] = np.nan
+        return df_out
 
-    # Módulo de la aceleración
-    acc_sq = np.zeros(len(df_mod))
+    acc_sq = np.zeros(len(df_out))
     for c in cols:
-        acc_sq += df_mod[c].fillna(0).values ** 2
-    df_mod["acc_mod"] = np.sqrt(acc_sq)
+        acc_sq += df_out[c].fillna(0).values ** 2
 
-    # Umbrales por percentiles
-    low_thr = df_mod["acc_mod"].quantile(p_low)
-    high_thr = df_mod["acc_mod"].quantile(p_high)
+    df_out["acc_magnitude"] = np.sqrt(acc_sq)
 
-    def label_from_acc_mod(x):
+    low_thr = df_out["acc_magnitude"].quantile(p_low)
+    high_thr = df_out["acc_magnitude"].quantile(p_high)
+
+    def label_from_magnitude(x):
         if x < low_thr:
             return "repose"
         elif x > high_thr:
@@ -198,28 +265,51 @@ def definir_clases_globales(df: pd.DataFrame,
         else:
             return "transition"
 
-    df_mod["final_global_mobile_state"] = df_mod["acc_mod"].apply(label_from_acc_mod)
+    df_out["final_global_mobile_state"] = df_out["acc_magnitude"].apply(label_from_magnitude)
+    return df_out
 
-    return df_mod
 
+def save_class_summary_png(df: pd.DataFrame, png_path: str):
+    """
+    Save class distribution as PNG table.
 
-def guardar_resumen_clases_png(df: pd.DataFrame, ruta_png_tabla: str):
+    Args:
+        df (pd.DataFrame): Input DataFrame with class labels.
+        png_path (str): Output PNG path.
+    """
     if "final_global_mobile_state" not in df.columns:
-        df_to_png(pd.DataFrame(), ruta_png_tabla, title="Clases vacías")
+        df_to_png(pd.DataFrame(), png_path, title="Empty Classes")
         return
 
     vc = df["final_global_mobile_state"].value_counts().reset_index()
-    vc.columns = ["Clase", "Cantidad"]
+    vc.columns = ["Class", "Count"]
 
-    df_to_png(vc, ruta_png_tabla, title="Distribución de clases")
+    df_to_png(vc, png_path, title="Class Distribution")
+
 
 # ============================================================
-# 4) EXTRACCIÓN DE FEATURES ACC (TABLA PNG)
+#   4) ACC FEATURE EXTRACTION (TABLE PNG)
 # ============================================================
-def extract_imu_acc_features(df: pd.DataFrame, cols: list, dt: float = 0.01) -> pd.DataFrame:
+def extract_acc_features(df: pd.DataFrame, columns: list, dt: float = 0.01) -> pd.DataFrame:
+    """
+    Extract ACC features per axis:
+    - mean
+    - standard deviation
+    - RMS (root mean square)
+    - mean frequency (FFT weighted)
+    - peak frequency (FFT maximum)
 
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        columns (list): Accelerometer columns.
+        dt (float): Sampling period (default 0.01s).
+
+    Returns:
+        pd.DataFrame: Feature summary for each axis.
+    """
     rows = []
-    for col in cols:
+
+    for col in columns:
         if col not in df.columns:
             rows.append([col, np.nan, np.nan, np.nan, np.nan, np.nan])
             continue
@@ -231,12 +321,12 @@ def extract_imu_acc_features(df: pd.DataFrame, cols: list, dt: float = 0.01) -> 
 
         mean = float(np.mean(arr))
         std = float(np.std(arr))
-        rms = float(np.sqrt(np.mean(arr**2)))
+        rms = float(np.sqrt(np.mean(arr ** 2)))
 
         N = len(arr)
         yf = fft(arr)
         xf = np.linspace(0.0, 1.0 / (2 * dt), N // 2)
-        mag = 2.0 / N * np.abs(yf[:N // 2])
+        mag = 2.0 / N * np.abs(yf[: N // 2])
 
         if np.sum(mag) > 0:
             mean_freq = float(np.sum(xf * mag) / np.sum(mag))
@@ -247,35 +337,60 @@ def extract_imu_acc_features(df: pd.DataFrame, cols: list, dt: float = 0.01) -> 
 
         rows.append([col, mean, std, rms, mean_freq, peak_freq])
 
-    return pd.DataFrame(rows, columns=["variable", "mean", "std", "rms", "mean_freq", "peak_freq"])
+    return pd.DataFrame(
+        rows,
+        columns=["variable", "mean", "std", "rms", "mean_freq", "peak_freq"]
+    )
 
 
-def guardar_features_png(df_feats: pd.DataFrame, ruta_png_tabla: str):
+def save_features_png(df_feats: pd.DataFrame, png_path: str):
     """
-    Guarda la tabla de features de acelerómetro como PNG, con números
-    formateados a 4 decimales para mejorar la legibilidad.
+    Save the extracted accelerometer features as a PNG table.
+
+    Args:
+        df_feats (pd.DataFrame): Feature DataFrame.
+        png_path (str): Output PNG path.
     """
     df_fmt = df_feats.copy()
-    num_cols = ["mean", "std", "rms", "mean_freq", "peak_freq"]
-    for c in num_cols:
+    numeric_cols = ["mean", "std", "rms", "mean_freq", "peak_freq"]
+
+    for c in numeric_cols:
         if c in df_fmt.columns:
             df_fmt[c] = df_fmt[c].map(
                 lambda x: f"{x:.4f}" if pd.notnull(x) else ""
             )
 
-    df_to_png(df_fmt, ruta_png_tabla, title="Features IMU (ACC)", fontsize=9)
+    df_to_png(df_fmt, png_path, title="ACC Features", fontsize=9)
+
 
 # ============================================================
-# 5) RANDOM FOREST (ACC) → TABLA PNG + FIGURA PNG
+#   5) RANDOM FOREST (TABLE PNG + FIGURE PNG)
 # ============================================================
-def entrenar_random_forest_acc(df: pd.DataFrame,
-                               feature_cols: list,
-                               label_col: str,
-                               ruta_tabla_reporte: str,
-                               ruta_figura_cm: str,
-                               test_size: float = 0.2,
-                               random_state: int = 42):
+def train_random_forest_acc(df: pd.DataFrame,
+                            feature_cols: list,
+                            label_col: str,
+                            table_output_path: str,
+                            cm_output_path: str,
+                            test_size: float = 0.2,
+                            random_state: int = 42):
+    """
+    Train a Random Forest classifier using only accelerometer axes.
 
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        feature_cols (list): List of accelerometer columns used as features.
+        label_col (str): Name of the label column.
+        table_output_path (str): Output path for the classification report PNG.
+        cm_output_path (str): Output path for the confusion matrix PNG.
+        test_size (float): Fraction of dataset for test split.
+        random_state (int): Random seed for reproducibility.
+
+    Returns:
+        tuple:
+            df_report (pd.DataFrame): Classification report table.
+            cm (np.ndarray): Confusion matrix.
+            labels (list): Class labels in order.
+    """
     df_valid = df.dropna(subset=feature_cols + [label_col])
     if len(df_valid) == 0:
         return pd.DataFrame(), np.array([]), []
@@ -289,7 +404,6 @@ def entrenar_random_forest_acc(df: pd.DataFrame,
 
     clf = RandomForestClassifier(n_estimators=100, random_state=random_state)
     clf.fit(X_train, y_train)
-
     y_pred = clf.predict(X_test)
 
     rep_dict = classification_report(
@@ -301,14 +415,14 @@ def entrenar_random_forest_acc(df: pd.DataFrame,
         if df_rep[c].dtype in [float, int]:
             df_rep[c] = df_rep[c].round(3)
 
-    # TABLA → results/tables
-    df_to_png(df_rep, ruta_tabla_reporte, title="Random Forest - Classification Report")
+    # Save classification report → TABLE
+    df_to_png(df_rep, table_output_path, title="Random Forest - Classification Report")
 
-    # MATRIZ DE CONFUSIÓN → results/figures
+    # Save confusion matrix → FIGURE
     labels = clf.classes_
     cm = confusion_matrix(y_test, y_pred, labels=labels)
 
-    os.makedirs(os.path.dirname(ruta_figura_cm), exist_ok=True)
+    os.makedirs(os.path.dirname(cm_output_path), exist_ok=True)
     fig, ax = plt.subplots(figsize=(6, 5))
     im = ax.imshow(cm, cmap="Blues")
 
@@ -319,11 +433,11 @@ def entrenar_random_forest_acc(df: pd.DataFrame,
 
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
-    ax.set_title("Matriz de Confusión - Random Forest")
+    ax.set_title("Confusion Matrix - Random Forest")
 
     plt.colorbar(im, ax=ax)
     plt.tight_layout()
-    plt.savefig(ruta_figura_cm, dpi=300, bbox_inches="tight")
+    plt.savefig(cm_output_path, dpi=300, bbox_inches="tight")
     plt.close()
 
     return df_rep, cm, labels

@@ -1,45 +1,40 @@
 """
-visualization.py
-----------------
-Módulo reutilizable para generación de visualizaciones estándar:
+Visualization:
 
-- Mapa de calor de correlación
-- Boxplot de múltiples variables
-- Violinplot de múltiples variables
-
-Todas las funciones:
-    - Reciben un DataFrame y lista de columnas
-    - No contienen rutas absolutas ni prints
-    - Guardan la figura en la ruta indicada por parámetro
-
-Requiere seaborn y matplotlib.
+Provides functions to generate common exploratory data analysis plots:
+- Correlation heatmap
+- Boxplot for multiple variables
+- Violinplot for distribution analysis
 """
 
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
 # =====================================================
-# 1. MAPA DE CALOR
+# 1. HEATMAP
 # =====================================================
 
-def generar_mapa_calor(df, columnas, ruta_figura):
-    """Genera y guarda un mapa de calor de correlación.
+def generate_heatmap(df, columns, figure_path):
+    """
+    Generate and save a correlation heatmap for selected columns.
 
     Args:
-        df (DataFrame): Datos limpios.
-        columnas (list): Lista de columnas numéricas.
-        ruta_figura (str): Ruta donde se guardará la imagen .png
+        df (pd.DataFrame): Input DataFrame containing numeric variables.
+        columns (list): List of columns to include in the correlation heatmap.
+        figure_path (str): Output path where the PNG file will be saved.
+
+    Returns:
+        None
     """
-    corr = df[columnas].corr()
+    corr = df[columns].corr()
 
     plt.figure(figsize=(10, 8))
     sns.heatmap(corr, annot=True, cmap="coolwarm")
-    plt.title("Heatmap - Correlación entre variables")
+    plt.title("Correlation Heatmap")
 
-    os.makedirs(os.path.dirname(ruta_figura), exist_ok=True)
-    plt.savefig(ruta_figura, dpi=300)
+    os.makedirs(os.path.dirname(figure_path), exist_ok=True)
+    plt.savefig(figure_path, dpi=300)
     plt.close()
 
 
@@ -47,21 +42,25 @@ def generar_mapa_calor(df, columnas, ruta_figura):
 # 2. BOXPLOT
 # =====================================================
 
-def generar_boxplot(df, columnas, ruta_figura):
-    """Genera y guarda un boxplot para múltiples columnas.
+def generate_boxplot(df, columns, figure_path):
+    """
+    Generate and save a boxplot for selected variables.
 
     Args:
-        df (DataFrame): Datos limpios.
-        columnas (list): Variables a visualizar.
-        ruta_figura (str): Ruta donde guardar la figura.
+        df (pd.DataFrame): Input DataFrame containing numeric variables.
+        columns (list): Columns to be displayed in the boxplot.
+        figure_path (str): Output path where the PNG file will be saved.
+
+    Returns:
+        None
     """
     plt.figure(figsize=(12, 8))
-    df[columnas].boxplot()
+    df[columns].boxplot()
     plt.xticks(rotation=90)
-    plt.title("Distribución y outliers de variables físicas")
+    plt.title("Variable Distribution and Outliers")
 
-    os.makedirs(os.path.dirname(ruta_figura), exist_ok=True)
-    plt.savefig(ruta_figura, dpi=300)
+    os.makedirs(os.path.dirname(figure_path), exist_ok=True)
+    plt.savefig(figure_path, dpi=300)
     plt.close()
 
 
@@ -69,19 +68,23 @@ def generar_boxplot(df, columnas, ruta_figura):
 # 3. VIOLINPLOT
 # =====================================================
 
-def generar_violinplot(df, columnas, ruta_figura):
-    """Genera y guarda un violinplot para múltiples variables.
+def generate_violinplot(df, columns, figure_path):
+    """
+    Generate and save a violinplot for selected variables.
 
     Args:
-        df (DataFrame): Datos limpios.
-        columnas (list): Variables numéricas.
-        ruta_figura (str): Ruta donde guardar la figura.
+        df (pd.DataFrame): Input DataFrame.
+        columns (list): Columns to include in the violinplot.
+        figure_path (str): Output location for the saved PNG figure.
+
+    Returns:
+        None
     """
     plt.figure(figsize=(12, 8))
-    sns.violinplot(data=df[columnas], inner="quartile")
+    sns.violinplot(data=df[columns], inner="quartile")
     plt.xticks(rotation=90)
-    plt.title("Distribución (Violinplot) de variables físicas")
+    plt.title("Variable Distribution (Violinplot)")
 
-    os.makedirs(os.path.dirname(ruta_figura), exist_ok=True)
-    plt.savefig(ruta_figura, dpi=300)
+    os.makedirs(os.path.dirname(figure_path), exist_ok=True)
+    plt.savefig(figure_path, dpi=300)
     plt.close()

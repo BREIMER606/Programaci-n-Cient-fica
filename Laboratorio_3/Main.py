@@ -1,9 +1,18 @@
 """
-Main.py — Pipeline completo:
-Preprocessing → Visualization → Analysis 
+Main:
 
-FIGURAS  → results/figures
-TABLAS   → results/tables
+Preprocessing → Visualization → Analysis
+
+FIGURES  → results/figures
+TABLES   → results/tables
+
+This script orchestrates the full workflow of Laboratory 3:
+1. Data loading and preprocessing.
+2. Exploratory visualization.
+3. Analytical processing: signal integration, segmentation, feature extraction,
+   and classification using Random Forest.
+
+All outputs (figures and tables) are saved as PNG files inside results/.
 """
 
 import os
@@ -11,77 +20,77 @@ import pandas as pd
 
 # ---- PREPROCESSING ----
 from Src.preprocessing import (
-    cargar_datos,
-    limpiar_nan,
-    seleccionar_columnas,
-    aplicar_filtro,
-    guardar_csv,
-    guardar_figuras,
+    load_data,
+    clean_nan,
+    select_columns,
+    apply_filter,
+    save_csv,
+    save_filter_figures,
 )
 
 # ---- VISUALIZATION ----
 from Src.visualization import (
-    generar_mapa_calor,
-    generar_boxplot,
-    generar_violinplot,
+    generate_heatmap,
+    generate_boxplot,
+    generate_violinplot,
 )
 
 # ---- ANALYSIS ----
 from Src.analysis import (
-    generar_figura_integracion,
-    guardar_resumen_segmentos_png,
-    definir_clases_globales,
-    guardar_resumen_clases_png,
-    extract_imu_acc_features,
-    guardar_features_png,
-    entrenar_random_forest_acc,
+    generate_integration_figure,
+    save_segment_summary_png,
+    define_global_classes,
+    save_class_summary_png,
+    extract_acc_features,
+    save_features_png,
+    train_random_forest_acc,
 )
 
 # =====================================================
-# 1. RUTAS (relativas)
+# 1. PATHS (relative)
 # =====================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-ruta_raw = os.path.join(BASE_DIR, "data", "raw", "const1-trial2-tdoa2.csv")
-ruta_processed = os.path.join(BASE_DIR, "data", "processed", "const1-trial2-tdoa2_clean.csv")
+raw_path = os.path.join(BASE_DIR, "data", "raw", "const1-trial2-tdoa2.csv")
+processed_path = os.path.join(BASE_DIR, "data", "processed", "const1-trial2-tdoa2_clean.csv")
 
-carpeta_figuras = os.path.join(BASE_DIR, "results", "figures")
-carpeta_tablas = os.path.join(BASE_DIR, "results", "tables")
+figures_folder = os.path.join(BASE_DIR, "results", "figures")
+tables_folder = os.path.join(BASE_DIR, "results", "tables")
 
-# Visualizations
-ruta_heatmap = os.path.join(carpeta_figuras, "heatmap_variables.png")
-ruta_boxplot = os.path.join(carpeta_figuras, "boxplot_variables.png")
-ruta_violinplot = os.path.join(carpeta_figuras, "violinplot_variables.png")
+# Visualization files
+heatmap_path = os.path.join(figures_folder, "heatmap_variables.png")
+boxplot_path = os.path.join(figures_folder, "boxplot_variables.png")
+violinplot_path = os.path.join(figures_folder, "violinplot_variables.png")
 
 # Analysis FIGURES
-ruta_integracion = os.path.join(carpeta_figuras, "integracion_acc.png")
-ruta_rf_cm = os.path.join(carpeta_figuras, "rf_confusion.png")
+integration_path = os.path.join(figures_folder, "integration_acc.png")
+rf_cm_path = os.path.join(figures_folder, "rf_confusion_matrix.png")
 
 # Analysis TABLES
-ruta_tabla_crudos = os.path.join(carpeta_tablas, "tabla_crudos.png")
-ruta_tabla_procesados = os.path.join(carpeta_tablas, "tabla_procesados.png")
-ruta_tabla_features = os.path.join(carpeta_tablas, "tabla_features.png")
-ruta_tabla_clases = os.path.join(carpeta_tablas, "tabla_clases.png")
-ruta_rf_reporte = os.path.join(carpeta_tablas, "rf_reporte.png")
+raw_table_path = os.path.join(tables_folder, "table_raw.png")
+processed_table_path = os.path.join(tables_folder, "table_processed.png")
+features_table_path = os.path.join(tables_folder, "table_features.png")
+classes_table_path = os.path.join(tables_folder, "table_classes.png")
+rf_report_path = os.path.join(tables_folder, "rf_report.png")
 
 # =====================================================
-# 2. PARÁMETROS PREPROCESAMIENTO
+# 2. PREPROCESSING PARAMETERS
 # =====================================================
-columnas_obligatorias = ["tdoa_meas"]
+required_columns = ["tdoa_meas"]
 
-columnas_interes = [
+columns_of_interest = [
     "t_pose",
     "acc_x", "acc_y", "acc_z",
 ]
 
-columna_tiempo = "t_pose"
-columnas_para_filtrar = ["acc_x", "acc_y", "acc_z"]
+time_column = "t_pose"
+columns_to_filter = ["acc_x", "acc_y", "acc_z"]
 window_size = 50
 
 # =====================================================
-# 3. VISUALIZACIÓN
+# 3. VISUALIZATION
 # =====================================================
-columnas_visualizacion = [
+visualization_columns = [
     "acc_x", "acc_y", "acc_z",
     "gyro_x", "gyro_y", "gyro_z",
     "pose_x", "pose_y", "pose_z",
@@ -89,90 +98,118 @@ columnas_visualizacion = [
 ]
 
 # =====================================================
-# 4. ANÁLISIS
+# 4. ANALYSIS
 # =====================================================
-segmentos_dict = {
+segment_dict = {
     "UWB": ['t_tdoa', 'idA', 'idB', 'tdoa_meas'],
     "IMU_acc": ['acc_x', 'acc_y', 'acc_z'],
     "IMU_gyro": ['gyro_x', 'gyro_y', 'gyro_z'],
     "Pose": ['pose_x', 'pose_y', 'pose_z'],
 }
 
-imu_cols_acc = ['acc_x', 'acc_y', 'acc_z']
-
-acc_filtered_candidates = ['acc_x_filt', 'acc_y_filt', 'acc_z_filt']
-max_muestras_integracion = 1000
+acc_columns = ['acc_x', 'acc_y', 'acc_z']
+filtered_acc_columns = ['acc_x_filt', 'acc_y_filt', 'acc_z_filt']
+max_samples_integration = 1000
 
 # =====================================================
 # 5. PIPELINE
 # =====================================================
 def main():
+    """
+    Executes the complete pipeline of Laboratory 3.
+
+    This includes:
+    ---------------------
+    1. PREPROCESSING
+       - Load raw data.
+       - Remove NaNs from required columns.
+       - Select relevant sensor channels.
+       - Apply smoothing/denoising filters.
+       - Save cleaned CSV and filtering figures.
+
+    2. VISUALIZATION
+       - Generate heatmap, boxplot, and violinplot for exploratory analysis.
+
+    3. ANALYSIS
+       - Integrate acceleration signals to obtain velocity estimates.
+       - Compute segment-wise data availability tables (raw and processed).
+       - Define global motion classes based on acceleration percentiles.
+       - Extract time-domain and frequency-domain features from the IMU.
+       - Train and evaluate a Random Forest classifier using ACC signals.
+
+    Saves:
+        Figures → results/figures/
+        Tables  → results/tables/
+
+    Returns:
+        None
+    """
 
     # -------------------- PREPROCESS --------------------
-    df = cargar_datos(ruta_raw)
-    df = limpiar_nan(df, columnas_obligatorias)
-    df_reduc = seleccionar_columnas(df, columnas_interes)
+    df = load_data(raw_path)
+    df = clean_nan(df, required_columns)
+    df_reduced = select_columns(df, columns_of_interest)
 
-    resultados = aplicar_filtro(
-        df=df_reduc,
-        columnas=columnas_para_filtrar,
-        columna_tiempo=columna_tiempo,
+    filter_results = apply_filter(
+        df=df_reduced,
+        columns=columns_to_filter,
+        time_column=time_column,
         window_size=window_size,
     )
 
-    os.makedirs(os.path.dirname(ruta_processed), exist_ok=True)
-    guardar_csv(df_reduc, ruta_processed)
-    guardar_figuras(resultados, carpeta_figuras)
+    os.makedirs(os.path.dirname(processed_path), exist_ok=True)
+    save_csv(df_reduced, processed_path)
+    save_filter_figures(filter_results, figures_folder)
 
     # -------------------- VISUALIZATION --------------------
-    df_clean = pd.read_csv(ruta_processed)
-    cols_ok = [c for c in columnas_visualizacion if c in df_clean.columns]
+    df_clean = pd.read_csv(processed_path)
+    valid_cols = [c for c in visualization_columns if c in df_clean.columns]
 
-    if cols_ok:
-        generar_mapa_calor(df_clean, cols_ok, ruta_heatmap)
-        generar_boxplot(df_clean, cols_ok, ruta_boxplot)
-        generar_violinplot(df_clean, cols_ok, ruta_violinplot)
+    if valid_cols:
+        generate_heatmap(df_clean, valid_cols, heatmap_path)
+        generate_boxplot(df_clean, valid_cols, boxplot_path)
+        generate_violinplot(df_clean, valid_cols, violinplot_path)
 
     # -------------------- ANALYSIS --------------------
 
-    # 1) INTEGRACIÓN FIGURA
-    acc_cols_integracion = []
-    for orig, filt in zip(imu_cols_acc, acc_filtered_candidates):
-        acc_cols_integracion.append(filt if filt in df_clean.columns else orig)
+    # 1) Integration Figure
+    acc_cols_integration = []
+    for orig, filt in zip(acc_columns, filtered_acc_columns):
+        acc_cols_integration.append(filt if filt in df_clean.columns else orig)
 
-    generar_figura_integracion(
+    generate_integration_figure(
         df=df_clean,
-        columna_tiempo=columna_tiempo,
-        columnas_acc=acc_cols_integracion,
-        max_muestras=max_muestras_integracion,
-        ruta_figura=ruta_integracion,
+        time_column=time_column,
+        acc_columns=acc_cols_integration,
+        max_samples=max_samples_integration,
+        figure_path=integration_path,
     )
 
-    # 2) TABLA crudos
-    df_raw_full = pd.read_csv(ruta_raw)
-    guardar_resumen_segmentos_png(df_raw_full, segmentos_dict, ruta_tabla_crudos)
+    # 2) Raw table
+    df_raw_full = pd.read_csv(raw_path)
+    save_segment_summary_png(df_raw_full, segment_dict, raw_table_path)
 
-    # 3) TABLA procesados
-    guardar_resumen_segmentos_png(df_clean, segmentos_dict, ruta_tabla_procesados)
+    # 3) Processed table
+    save_segment_summary_png(df_clean, segment_dict, processed_table_path)
 
-    # 4) DEFINIR CLASES + TABLA
-    df_classes = definir_clases_globales(df_clean, imu_cols_acc)
-    guardar_resumen_clases_png(df_classes, ruta_tabla_clases)
+    # 4) Define classes + table
+    df_classes = define_global_classes(df_clean, acc_columns)
+    save_class_summary_png(df_classes, classes_table_path)
 
-    # 5) FEATURES ACC + TABLA
-    df_feats = extract_imu_acc_features(df_classes, imu_cols_acc)
-    guardar_features_png(df_feats, ruta_tabla_features)
+    # 5) ACC features + table
+    df_features = extract_acc_features(df_classes, acc_columns)
+    save_features_png(df_features, features_table_path)
 
-    # 6) RANDOM FOREST ACC
-    entrenar_random_forest_acc(
+    # 6) Random Forest (ACC)
+    train_random_forest_acc(
         df=df_classes,
-        feature_cols=imu_cols_acc,
+        feature_cols=acc_columns,
         label_col="final_global_mobile_state",
-        ruta_tabla_reporte=ruta_rf_reporte,   # TABLA → tables
-        ruta_figura_cm=ruta_rf_cm,            # FIGURA → figures
+        table_output_path=rf_report_path,
+        cm_output_path=rf_cm_path,
     )
 
-    print("✔ Pipeline completo finalizado.")
+    print("✔ Full pipeline completed.")
 
 
 if __name__ == "__main__":

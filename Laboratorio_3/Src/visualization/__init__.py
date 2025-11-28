@@ -1,11 +1,22 @@
+"""
+Visualization package initializer.
+
+This module exposes the main visualization functions so they can be
+imported directly from the package, for example:
+
+    from Src.visualization import generate_heatmap, generate_boxplot
+
+The __all__ list defines the public API of the visualization package.
+"""
+
 from .visualization import (
-    generar_mapa_calor,
-    generar_boxplot,
-    generar_violinplot,
+    generate_heatmap,
+    generate_boxplot,
+    generate_violinplot,
 )
 
 __all__ = [
-    "generar_mapa_calor",
-    "generar_boxplot",
-    "generar_violinplot",
+    "generate_heatmap",
+    "generate_boxplot",
+    "generate_violinplot",
 ]
